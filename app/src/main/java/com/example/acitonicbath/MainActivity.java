@@ -50,12 +50,13 @@ public class MainActivity extends AppCompatActivity {
     Bath arduino = new Bath();
     TimeFragment timeFragment = new TimeFragment(arduino);
     TemperatureFragment tempFragment = new TemperatureFragment(this);
-    SharedPreferences savePreference = getSharedPreferences("MyPref", MODE_PRIVATE);
+    SharedPreferences savePreference;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        savePreference = getSharedPreferences("MyPref", MODE_PRIVATE);
         initUI();
         initConnect();
     }
@@ -149,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
         private String state ="";
         private Cooler cooler0 = new Cooler();
         private Cooler cooler1 = new Cooler();
-        private WebServer server;
+        private WebServer server = new WebServer();
 
         public void setState(String state){
             if(!this.state.equals(state)){
@@ -371,10 +372,10 @@ public class MainActivity extends AppCompatActivity {
             }
         }, 0, 1000);
     }
-
     class WebServer{
         boolean connection;
         String ipAddress, portNumber;
+        public WebServer(){}
         public WebServer(String ipAddress, String portNumber){
             this.ipAddress = ipAddress;
             this.portNumber = portNumber;
