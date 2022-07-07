@@ -6,51 +6,12 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <Button
-        android:id="@+id/buttonSend"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="16dp"
-        android:text="@string/отправить"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+    <RelativeLayout
+        android:id="@+id/main_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/totalTime"
-        android:layout_width="240dp"
-        android:layout_height="wrap_content"
-        android:text="@string/_00_00"
-        android:textAlignment="center"
-        android:textSize="96sp"
-        app:layout_constraintBottom_toTopOf="@+id/buttonSend"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/time1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:minHeight="48dp"
-        android:text="@string/_00_00_"
-        android:textSize="34sp"
-        app:layout_constraintBottom_toTopOf="@+id/totalTime"
-        app:layout_constraintStart_toStartOf="@+id/totalTime" />
-
-    <TextView
-        android:id="@+id/time2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:minHeight="48dp"
-        android:text="@string/_00_00__"
-        android:textSize="34sp"
-        app:layout_constraintBottom_toTopOf="@+id/totalTime"
-        app:layout_constraintEnd_toEndOf="@+id/totalTime" />
+    </RelativeLayout>
 
     <EditText
         android:id="@+id/editIPid"
@@ -60,12 +21,26 @@
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
         android:ems="10"
-        android:hint="select IP"
+        android:hint="@string/select_ip"
         android:inputType="textPersonName"
         android:minHeight="48dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:autofillHints="" />
+
+    <CheckBox
+        android:id="@+id/checkBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:checked="false"
+        android:clickable="false"
+        android:text="@string/connect"
+        app:layout_constraintBottom_toBottomOf="@+id/editIPid"
+        app:layout_constraintEnd_toEndOf="@+id/editIPid"
+        app:layout_constraintTop_toTopOf="@+id/editIPid"
+        app:layout_constraintVertical_bias="0.0" />
 
     <Button
         android:id="@+id/saveButtonID"
@@ -73,10 +48,59 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
-        android:text="Save IP"
+        android:text="@string/save_ip"
         app:layout_constraintEnd_toEndOf="@+id/editIPid"
         app:layout_constraintHorizontal_bias="0.491"
         app:layout_constraintStart_toStartOf="@+id/editIPid"
         app:layout_constraintTop_toBottomOf="@+id/editIPid" />
+
+    <Button
+        android:id="@+id/buttonSend"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="16dp"
+        android:text="Установить время"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/buttonStart"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="100dp"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/icons8_play_32"
+        android:contentDescription="@string/_00_00"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toTopOf="@+id/buttonSend"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:ignore="DuplicateSpeakableTextCheck" />
+
+    <Button
+        android:id="@+id/buttonStop"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginEnd="100dp"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/icons8_stop_32"
+        android:contentDescription="@string/_00_00"
+        app:layout_constraintBottom_toTopOf="@+id/buttonSend"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/frameLayout"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="100dp"
+        app:layout_constraintBottom_toTopOf="@+id/buttonSend"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/saveButtonID">
+
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -3,10 +3,12 @@ package com.example.acitonicbath;
 import static androidx.core.app.NotificationCompat.PRIORITY_HIGH;
 import static androidx.core.app.NotificationCompat.DEFAULT_ALL;
 
-import static java.lang.Thread.sleep;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
+import androidx.core.view.GestureDetectorCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -16,17 +18,24 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.app.TimePickerDialog;
+import android.widget.TimePicker;
+
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.sql.Time;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -34,27 +43,53 @@ import java.util.TimerTask;
 public class MainActivity extends AppCompatActivity {
     EditText editTextIP;
     TextView totalTime;
-    Cooler cooler0;
-    Cooler cooler1;
+    CheckBox checkBox;
+    Button buttonSend;
+    Button buttonPlayOrPause;
+    Button buttonStop;
+
+    FrameLayout frameLayout;
+    RelativeLayout main_layout;
+
+    TimeFragment timeFragment;
+    TemperatureFragment tempFragment = new TemperatureFragment(this);
+
+    public Bath arduino = new Bath();
 
     private NotificationManager notificationManager;
     private static final int NOTIFY_ID = 1;
     private static final String CHANNEL_ID = "Done";
 
     SharedPreferences savePreference;
-    private static final String KEYIP = "IP";
+    private final String KEYIP = "IP";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        totalTime = findViewById(R.id.totalTime);
+
+        arduino.createCoolerAndSet(0);
+        arduino.createCoolerAndSet(1);
+
+        timeFragment = new TimeFragment(arduino);
+
+        setFragment(timeFragment);
+        setFragment(tempFragment);
+        setFragment(timeFragment);
+
+
         savePreference = getSharedPreferences("MyPref", MODE_PRIVATE);
-        cooler0 = new Cooler(R.id.time1);
-        cooler1 = new Cooler(R.id.time2);
+
+        checkBox = findViewById(R.id.checkBox);
+
+
+
         editTextIP = findViewById(R.id.editIPid);
         editTextIP.setText(savePreference.getString(KEYIP, ""));
+
         notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
+
+        initConnect();
 
         Button saveBTN = findViewById(R.id.saveButtonID);
         saveBTN.setOnClickListener(new View.OnClickListener() {
@@ -63,16 +98,420 @@ public class MainActivity extends AppCompatActivity {
                 SharedPreferences.Editor ed = savePreference.edit();
                 ed.putString(KEYIP, editTextIP.getText().toString());
                 ed.apply();
+                initConnect();
             }
         });
 
-        Button btn = findViewById(R.id.buttonSend);
-        btn.setOnClickListener(new View.OnClickListener() {
+        buttonSend = findViewById(R.id.buttonSend);
+        buttonSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 sendTime();
+                buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
             }
         });
+
+        buttonPlayOrPause = findViewById(R.id.buttonStart);
+        buttonPlayOrPause.setOnClickListener((View view)->{
+            if(arduino.getState().equals(Bath.STATE_READY)){
+                sendTime();
+                arduino.start();
+                buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_pause_32);
+            } else {
+                arduino.pause();
+                buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
+            }
+
+        });
+
+        buttonStop = findViewById(R.id.buttonStop);
+        buttonStop.setOnClickListener((View view)->{
+            arduino.stop();
+            buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
+        });
+
+
+
+
+
+
+
+
+
+
+        GestureDetectorCompat lSwipeDetector = new GestureDetectorCompat(this, new MyGestureListener());
+        main_layout = findViewById(R.id.main_layout);
+
+        main_layout.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return lSwipeDetector.onTouchEvent(event);
+            }
+        });
+
+
+
+    }
+    private class MyGestureListener extends GestureDetector.SimpleOnGestureListener{
+        boolean frag = false;
+        @Override
+        public boolean onDown(MotionEvent e) {
+            return true;
+        }
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY){
+            if (Math.abs(e1.getY() - e2.getY()) > 100)
+                return false;
+            if (Math.abs(e2.getX() - e1.getX()) > 50 && Math.abs(velocityX) > 0) {
+                if(frag) {
+                    setFragment(timeFragment);
+                } else {
+                    setFragment(tempFragment);
+                }
+                frag = !frag;
+
+            }
+            return false;
+        }
+    }
+    public void setFragment(Fragment fragment){
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        ft.replace(R.id.frameLayout, fragment);
+        ft.addToBackStack(null);
+        ft.commit();
+    }
+
+    public class Bath{
+        public static final String STATE_READY = "ready";
+        public static final String STATE_STOP = "stop";
+        public static final String STATE_TIME0 = "time0";
+        public static final String STATE_TIME1 = "time1";
+
+        private String state ="";
+        private Cooler cooler0;
+        private Cooler cooler1;
+        private WebServer server;
+
+
+        public void setState(String state){
+            if(this.state.equals(state)){
+
+            }else{
+                this.state = state;
+                switch (state){
+                    case "stop":
+                        stop();
+                        break;
+                    case "pause":
+                        break;
+                    case "ready":
+                        break;
+                    case "time0":
+                        break;
+                    case "time1":
+                        break;
+                    default:
+                        break;
+                }
+
+            }
+
+        }
+
+        public String getState(){
+            return state;
+        }
+
+        public void setConnection(boolean connection){
+            if(server.connection == connection){
+                //not first
+            }else{
+                //first
+                server.connection = connection;
+            }
+        }
+
+        public void setView(){
+            timeFragment.setView(this);
+        }
+
+        public boolean getConnection(){
+            return server.connection;
+        }
+        @Deprecated
+        public Cooler createCooler(int id){
+            return new Cooler(id);
+        }
+
+        public void createCoolerAndSet(int id){
+            setCooler(id, new Cooler());
+        }
+
+        public void clearTime(){
+            cooler0.clearTime();
+            cooler1.clearTime();
+        }
+
+        public Cooler getCooler(int id){
+            if(id==0){
+                return cooler0;
+            }else{
+                return cooler1;
+            }
+        }
+
+        public void setCooler(int id, Cooler cooler){
+            if(id==0){
+                cooler0 = cooler;
+            }else{
+                cooler1 = cooler;
+            }
+        }
+        public void setView(int id, TextView textView){
+            switch (id){
+                case 0:
+                    cooler0.setView(textView);
+                    break;
+                case 1:
+                    cooler1.setView(textView);
+                default:
+                    totalTime = textView;
+                    setTotalTime();
+
+            }
+        }
+
+        public WebServer getServer(){
+            return  server;
+        }
+
+        public void setServer(WebServer server){
+            this.server = server;
+        }
+
+        public void start(){
+            String requests = "start,0";
+            new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
+        }
+
+        public void pause(){
+            String requests = "stop,0";
+            new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
+        }
+
+        public void stop(){
+            String requests = "stop,0";
+            new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
+            arduino.clearTime();
+            buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
+            sendNotification("Готово", "Твоё время пришло...");
+        }
+
+        public class Cooler {
+            Calendar workingTime = Calendar.getInstance();
+            int id;
+            TextView textView;
+
+            {
+                workingTime.set(Calendar.MINUTE, 0);
+                workingTime.set(Calendar.HOUR_OF_DAY, 0);
+                workingTime.set(Calendar.SECOND, 0);
+            }
+            public Cooler(){}
+            @Deprecated
+            public Cooler(int id){
+                this.textView = findViewById(id);
+                this.textView.setOnClickListener(new listener());
+            }
+            public void setView(TextView textView){
+                this.textView = textView;
+                this.textView.setOnClickListener(new listener());
+                update();
+            }
+            public void setSecondTime(int second){
+                int hour = second/3600;
+                second = second%3600;
+                int minute = second/60;
+                second = second%60;
+                workingTime.set(Calendar.SECOND, second);
+                workingTime.set(Calendar.MINUTE, minute);
+                workingTime.set(Calendar.HOUR_OF_DAY, hour);
+            }
+            public void clearTime(){
+                workingTime.set(Calendar.MINUTE, 0);
+                workingTime.set(Calendar.HOUR_OF_DAY, 0);
+                workingTime.set(Calendar.SECOND, 0);
+            }
+            public void update() {
+                if (workingTime.get(Calendar.HOUR_OF_DAY) == 0) {
+                    textView.setText(String.format("%02d:%02d", workingTime.get(Calendar.MINUTE), workingTime.get(Calendar.SECOND)));
+                } else {
+                    textView.setText(String.format("%02d:%02d", workingTime.get(Calendar.HOUR_OF_DAY), workingTime.get(Calendar.MINUTE)));
+                }
+            }
+
+            @Override
+            public String toString() {
+                int second = ((workingTime.get(Calendar.HOUR_OF_DAY)*60+workingTime.get(Calendar.MINUTE))*60)+workingTime.get(Calendar.SECOND);
+                return String.format("%d", second);
+            }
+            class listener implements View.OnClickListener {
+                @Override
+                public void onClick(View view) {
+                    TimePickerDialog.OnTimeSetListener t = new TimePickerDialog.OnTimeSetListener() {
+                        @Override
+                        public void onTimeSet(TimePicker timePicker, int hourOfDay, int minute) {
+                            workingTime.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                            workingTime.set(Calendar.MINUTE, minute);
+                            textView.setText(String.format("%02d:%02d",  workingTime.get(Calendar.HOUR_OF_DAY),workingTime.get(Calendar.MINUTE)));
+                            setTotalTime();
+                        }
+                    };
+                    new TimePickerDialog(MainActivity.this, t,
+                            workingTime.get(Calendar.HOUR_OF_DAY),
+                            workingTime.get(Calendar.MINUTE), true)
+                            .show();
+                }
+            }
+        }
+
+    }
+
+    boolean last = true;
+    public void initConnect() {
+        String ipAddress = editTextIP.getText().toString();
+        if(ipAddress.indexOf(":")<0)return;
+        String portNumber = ipAddress.split(":")[1];
+        ipAddress = ipAddress.split(":")[0];
+        arduino.setServer(new WebServer(ipAddress, portNumber));
+        last = true;
+        Timer myTimer = new Timer();
+        myTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                //{command, args}
+                boolean connection = false;
+                String str = "";
+                try {
+                    String random = (int) (Math.random() * 10000) + "";
+                    str = arduino.getServer().sendRequest("connection," + random);
+                    if (str.split(",")[0].equals("connection")) {
+                        if (str.split(",")[1].equals(random)) {
+                            connection = true;
+                        }
+                    }
+                }catch(Exception ex) {
+
+                }
+                arduino.setConnection(connection);
+                try{
+                    if(arduino.getConnection()){
+                        str = arduino.getServer().sendRequest("state,0");
+                        if(str.split(",")[0].equals("state")){
+                            if(!arduino.getState().equals(str.split(",")[1]))
+                                arduino.setState(str.split(",")[1]);
+                            MainActivity.this.runOnUiThread(()->{
+                            });
+                            tempFragment.setTemperature((int)Float.parseFloat(str.split(",")[2]));
+                        }
+                        if(arduino.getState().equals(Bath.STATE_TIME0)){
+                            str = arduino.getServer().sendRequest("getTime,0");
+                            if(str.split(",")[0].equals("getTime")){
+                                arduino.getCooler(0).setSecondTime(Integer.parseInt(str.split(",")[1]));
+                            }
+                        }
+                        if(arduino.getState().equals(Bath.STATE_TIME1)){
+                            str = arduino.getServer().sendRequest("getTime,1");
+                            if(str.split(",")[0].equals("getTime")){
+                                arduino.getCooler(1).setSecondTime(Integer.parseInt(str.split(",")[1]));
+                            }
+                        }
+                    } else {
+
+                    }
+                } catch (Exception ex) {
+                    Log.i("initConnect", "" + Arrays.toString(ex.getStackTrace()));
+                }
+                MainActivity.this.runOnUiThread(()->{
+                    checkBox.setChecked(arduino.getConnection());
+                    setTotalTime();
+                });
+            }
+        }, 0, 1000);
+    }
+
+    class WebServer{
+        boolean connection;
+        String ipAddress, portNumber;
+
+        public WebServer(String ipAddress, String portNumber){
+            this.ipAddress = ipAddress;
+            this.portNumber = portNumber;
+        }
+
+        /**
+         * Description: Послать HTTP Get запрос на указанные ip адрес и порт.
+         * Также послать параметр "parameterName" со значением "parameterValue".
+         * @return Текст ответа с ip адреса или сообщение ERROR, если не получилось получить ответ
+         */
+        public String sendRequest(String command) {
+            String serverResponse = "";
+            try {
+                URL website = new URL("http://"+ipAddress+":"+portNumber+"/send?command="+command);
+                Log.i("WebSite", "" + website);
+                HttpURLConnection httpURLConnection = (HttpURLConnection)website.openConnection();
+                httpURLConnection.setRequestMethod("GET");
+
+                BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+
+                String inputLine;
+                StringBuffer response = new StringBuffer();
+                serverResponse = response.toString();
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+                serverResponse = response.toString();
+            } catch (Exception ex){
+                System.out.println(Arrays.toString(ex.getStackTrace()));
+                Log.i("sendRequest", "" + ex);
+                return null;
+            }
+            // вернуть текст отклика сервера
+            Log.wtf("Ответ", serverResponse);
+            //Log.i("Ответ", serverResponse);
+            return serverResponse;
+        }
+    }
+
+    public void sendTime() {
+        try{
+            String requests = "";
+            //OpenConnectionSendRequests
+            if(arduino.getState().equals(Bath.STATE_READY)){
+                requests = "setTime0," + arduino.cooler0.toString();
+                new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
+                requests = "setTime1," + arduino.cooler1.toString();
+                new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
+            }
+        }catch(Exception ex){
+            Log.i("sendTime", "" + ex);
+        }
+    }
+
+    public void setTotalTime() {
+        if (timeFragment ==null) {
+            return;
+        }
+        int hours = (arduino.cooler0.workingTime.get(Calendar.HOUR_OF_DAY) + arduino.cooler1.workingTime.get(Calendar.HOUR_OF_DAY));
+        int minutes = (arduino.cooler0.workingTime.get(Calendar.MINUTE) + arduino.cooler1.workingTime.get(Calendar.MINUTE));
+        int seconds = (arduino.cooler0.workingTime.get(Calendar.SECOND) + arduino.cooler1.workingTime.get(Calendar.SECOND));
+        hours += minutes/60;
+        minutes = minutes%60;
+
+        arduino.cooler1.update();
+        arduino.cooler0.update();
+        totalTime.setText(String.format("%02d:%02d:%02d",hours, minutes, seconds));
     }
 
     public void sendNotification(String title, String text){
@@ -96,190 +535,19 @@ public class MainActivity extends AppCompatActivity {
         notificationManager.notify(NOTIFY_ID, notificationBuilder.build());
     }
 
-    public void sendTime() {
-        try{
-            String ipAddress = editTextIP.getText().toString();
-            String portNumber = ipAddress.split(":")[1];
-            ipAddress = ipAddress.split(":")[0];
-            String requests = "{start,"+cooler0+"," + cooler1 + "}";
-            //OpenConnectionSendRequests
-            new HttpRequestAsyncTask(ipAddress, portNumber, requests).execute();
-
-        }catch(Exception ex){
-            System.out.println(ex);
-        }
-    }
-
-
-    boolean last = true;
-    public void startTimer(){
-        last = true;
-        Timer myTimer = new Timer();
-        myTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-
-                if(cooler0.workingTime.get(Calendar.MINUTE)<=0){
-                    if(cooler0.workingTime.get(Calendar.HOUR_OF_DAY)<=0){
-                        if(cooler1.workingTime.get(Calendar.MINUTE)<=0) {
-                            if (cooler1.workingTime.get(Calendar.HOUR_OF_DAY) <= 0) {
-                                last = false;
-                                sendNotification("Готово", "Твоё время пришло...");
-                                myTimer.cancel();
-                            } else {
-                                cooler1.workingTime.set(Calendar.HOUR_OF_DAY, cooler1.workingTime.get(Calendar.HOUR_OF_DAY) - 1);
-                                cooler1.workingTime.set(Calendar.MINUTE,59);
-                            }
-                        } else{
-                            cooler1.workingTime.set(Calendar.MINUTE, cooler1.workingTime.get(Calendar.MINUTE)-1);
-                        }
-                    }else{
-                        cooler0.workingTime.set(Calendar.HOUR_OF_DAY, cooler0.workingTime.get(Calendar.HOUR_OF_DAY)-1);
-                        cooler0.workingTime.set(Calendar.MINUTE,59);
-                    }
-                }else{
-                    cooler0.workingTime.set(Calendar.MINUTE, cooler0.workingTime.get(Calendar.MINUTE)-1);
-                }
-
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        setTotalTime();
-
-                        int hours = (cooler0.workingTime.get(Calendar.HOUR_OF_DAY) + cooler1.workingTime.get(Calendar.HOUR_OF_DAY));
-                        int minutes = (cooler0.workingTime.get(Calendar.MINUTE) + cooler1.workingTime.get(Calendar.MINUTE));
-                        hours += minutes/60;
-                        minutes = minutes%60;
-                        if(hours ==0 && minutes == 0 && last){
-                            Timer timer = new Timer();
-                            timer.schedule(new TimerTask() {
-                                int time = 59;
-                                @Override
-                                public void run() {
-                                    totalTime.setText(time--+"");
-                                    if(time<=0){
-                                        timer.cancel();
-                                    }
-                                }
-                            },0,1000);
-
-                        }
-                    }
-                });
-            }
-        }, 0, 60000);
-    }
-
-
-    /**
-     * Description: Послать HTTP Get запрос на указанные ip адрес и порт.
-     * Также послать параметр "parameterName" со значением "parameterValue".
-     * @param ipAddress ip адрес, на который необходимо послать запрос
-     * @param portNumber номер порта ip адреса
-     * @return Текст ответа с ip адреса или сообщение ERROR, если не получилось получить ответ
-     */
-    public String sendRequest(String ipAddress, String portNumber, String command) {
-        String serverResponse = "";
-        try {
-            URL website = new URL("http://"+ipAddress+":"+portNumber+"/send?command="+command);
-            System.out.println(website);
-            HttpURLConnection httpURLConnection = (HttpURLConnection)website.openConnection();
-            httpURLConnection.setRequestMethod("GET");
-
-            BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
-            String inputLine;
-            StringBuffer response = new StringBuffer();
-            serverResponse = response.toString();
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
-            }
-            in.close();
-            serverResponse = response.toString();
-        } catch (Exception ex){
-            System.out.println();
-            System.out.println("eroerororor"+ex);
-            return null;
-        }
-        // вернуть текст отклика сервера
-        System.out.println(serverResponse);
-        return serverResponse;
-    }
-
     private class HttpRequestAsyncTask extends AsyncTask<Void, Void, Void>{
-        String ipAddress;
-        String portNumber;
+        WebServer server;
         String requests;
-        public HttpRequestAsyncTask(String ipAddress, String portNumber, String command){
-            this.ipAddress = ipAddress;
-            this.portNumber = portNumber;
+
+        public HttpRequestAsyncTask(WebServer server, String command){
+            this.server = server;
             this.requests = command;
         }
 
         @Override
         protected Void doInBackground(Void... voids) {
-            String str = sendRequest(ipAddress, portNumber, requests);
-            if(str != null){
-                startTimer();
-            }
+            String str = server.sendRequest(requests);
             return null;
-        }
-    }
-
-
-    public void setTotalTime() {
-        int hours = (cooler0.workingTime.get(Calendar.HOUR_OF_DAY) + cooler1.workingTime.get(Calendar.HOUR_OF_DAY));
-        int minutes = (cooler0.workingTime.get(Calendar.MINUTE) + cooler1.workingTime.get(Calendar.MINUTE));
-        hours += minutes/60;
-        minutes = minutes%60;
-        cooler1.update();
-        cooler0.update();
-        totalTime.setText(String.format("%02d:%02d",hours, minutes));
-        System.out.println(cooler0 + "\n" + cooler1);
-    }
-
-
-    class Cooler {
-        Calendar workingTime = Calendar.getInstance();
-        int id;
-        TextView textView;
-
-        {
-            workingTime.set(Calendar.MINUTE, 0);
-            workingTime.set(Calendar.HOUR_OF_DAY, 0);
-        }
-
-
-        public Cooler(int id){
-            this.textView = findViewById(id);
-            this.textView.setOnClickListener(new listener());
-        }
-        public void update(){
-            textView.setText(String.format("%02d:%02d",  workingTime.get(Calendar.HOUR_OF_DAY),workingTime.get(Calendar.MINUTE)));
-        }
-
-
-        @Override
-        public String toString() {
-            int second = (workingTime.get(Calendar.HOUR_OF_DAY)*60+workingTime.get(Calendar.MINUTE))*60;
-            return String.format("%d",second);
-        }
-
-        TimePickerDialog.OnTimeSetListener t = (view, hourOfDay, minute) -> {
-            workingTime.set(Calendar.HOUR_OF_DAY, hourOfDay);
-            workingTime.set(Calendar.MINUTE, minute);
-            textView.setText(String.format("%02d:%02d",  workingTime.get(Calendar.HOUR_OF_DAY),workingTime.get(Calendar.MINUTE)));
-            setTotalTime();
-
-        };
-
-        class listener implements View.OnClickListener {
-            @Override
-            public void onClick(View view) {
-                new TimePickerDialog(MainActivity.this, t,
-                        workingTime.get(Calendar.HOUR_OF_DAY),
-                        workingTime.get(Calendar.MINUTE), true)
-                        .show();
-            }
         }
     }
 }
