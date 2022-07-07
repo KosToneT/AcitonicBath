@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
 
         buttonSend = findViewById(R.id.buttonSend);
         buttonSend.setOnClickListener((view)->{
-            sendTime();
+            arduino.sendTime();
             MainActivity.this.runOnUiThread(()->{
                 buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
             });
@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
         buttonPlayOrPause = findViewById(R.id.buttonStart);
         buttonPlayOrPause.setOnClickListener((View view)->{
             if(arduino.getState().equals(Bath.STATE_READY)){
-                sendTime();
+                arduino.sendTime();
                 arduino.start();
                 MainActivity.this.runOnUiThread(()->{
                     buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_pause_32);
@@ -140,7 +140,6 @@ public class MainActivity extends AppCompatActivity {
         ft.addToBackStack(null);
         ft.commit();
     }
-
     public class Bath{
         public static final String STATE_READY = "ready";
         public static final String STATE_STOP = "stop";
@@ -150,6 +149,7 @@ public class MainActivity extends AppCompatActivity {
         private String state ="";
         private Cooler cooler0 = new Cooler();
         private Cooler cooler1 = new Cooler();
+        private TextView totalTime;
         private WebServer server = new WebServer();
 
         public void setState(String state){
@@ -184,21 +184,16 @@ public class MainActivity extends AppCompatActivity {
                 server.connection = connection;
             }
         }
+        public boolean getConnection(){
+            return server.connection;
+        }
 
         public void setView(){
             timeFragment.setView(this);
         }
 
-        public boolean getConnection(){
-            return server.connection;
-        }
-        public void createCoolerAndSet(int id){
-            setCooler(id, new Cooler());
-        }
-        public void clearTime(){
-            cooler0.clearTime();
-            cooler1.clearTime();
-        }
+
+
         public Cooler getCooler(int id){
             if(id==0){
                 return cooler0;
@@ -231,6 +226,9 @@ public class MainActivity extends AppCompatActivity {
         public void setServer(WebServer server){
             this.server = server;
         }
+
+
+
         public void start(){
             String requests = "start,0";
             new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
@@ -247,6 +245,37 @@ public class MainActivity extends AppCompatActivity {
                 buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
             });
             sendNotification("Готово", "Твоё время пришло...");
+        }
+        public void setTotalTime(TextView totalTime){
+            this.totalTime = totalTime;
+        }
+        public void setTotalTime() {
+            int hours = (cooler0.workingTime.get(Calendar.HOUR_OF_DAY) + cooler1.workingTime.get(Calendar.HOUR_OF_DAY));
+            int minutes = (cooler0.workingTime.get(Calendar.MINUTE) + cooler1.workingTime.get(Calendar.MINUTE));
+            int seconds = (cooler0.workingTime.get(Calendar.SECOND) + cooler1.workingTime.get(Calendar.SECOND));
+            hours += minutes/60;
+            minutes = minutes%60;
+            cooler1.update();
+            cooler0.update();
+            totalTime.setText(String.format("%02d:%02d:%02d",hours, minutes, seconds));
+        }
+        public void sendTime() {
+            try{
+                String requests = "";
+                //OpenConnectionSendRequests
+                if(getState().equals(Bath.STATE_READY)){
+                    requests = "setTime0," + arduino.cooler0.toString();
+                    new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
+                    requests = "setTime1," + arduino.cooler1.toString();
+                    new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
+                }
+            }catch(Exception ex){
+                Log.i("sendTime", "" + ex);
+            }
+        }
+        public void clearTime(){
+            cooler0.clearTime();
+            cooler1.clearTime();
         }
         public class Cooler {
             Calendar workingTime = Calendar.getInstance();
@@ -363,7 +392,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 MainActivity.this.runOnUiThread(()->{
                     checkBox.setChecked(arduino.getConnection());
-                    setTotalTime();
+                    arduino.setTotalTime();
                 });
                 if(!arduino.getConnection()){
                     myTimer.cancel();
@@ -408,32 +437,6 @@ public class MainActivity extends AppCompatActivity {
             return serverResponse;
         }
     }
-    public void sendTime() {
-        try{
-            String requests = "";
-            //OpenConnectionSendRequests
-            if(arduino.getState().equals(Bath.STATE_READY)){
-                requests = "setTime0," + arduino.cooler0.toString();
-                new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
-                requests = "setTime1," + arduino.cooler1.toString();
-                new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
-            }
-        }catch(Exception ex){
-            Log.i("sendTime", "" + ex);
-        }
-    }
-
-    public void setTotalTime() {
-        int hours = (arduino.cooler0.workingTime.get(Calendar.HOUR_OF_DAY) + arduino.cooler1.workingTime.get(Calendar.HOUR_OF_DAY));
-        int minutes = (arduino.cooler0.workingTime.get(Calendar.MINUTE) + arduino.cooler1.workingTime.get(Calendar.MINUTE));
-        int seconds = (arduino.cooler0.workingTime.get(Calendar.SECOND) + arduino.cooler1.workingTime.get(Calendar.SECOND));
-        hours += minutes/60;
-        minutes = minutes%60;
-        arduino.cooler1.update();
-        arduino.cooler0.update();
-        totalTime.setText(String.format("%02d:%02d:%02d",hours, minutes, seconds));
-    }
-
     public void sendNotification(String title, String text){
         NotificationManager notificationManager = (NotificationManager)getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
         Intent intent = new Intent(getApplicationContext(), MainActivity.class);
@@ -465,7 +468,7 @@ public class MainActivity extends AppCompatActivity {
         }
         @Override
         protected Void doInBackground(Void... voids) {
-            String str = server.sendRequest(requests);
+            server.sendRequest(requests);
             return null;
         }
     }
