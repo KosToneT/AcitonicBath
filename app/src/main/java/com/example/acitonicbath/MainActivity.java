@@ -23,7 +23,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.app.TimePickerDialog;
@@ -38,71 +37,52 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
+    private static final int NOTIFY_ID = 1;
+    private static final String CHANNEL_ID = "Done";
+    private static final String KEY_IP = "IP";
+
     EditText editTextIP;
     TextView totalTime;
     CheckBox checkBox;
     Button buttonSend;
     Button buttonPlayOrPause;
     Button buttonStop;
-
-    FrameLayout frameLayout;
-    RelativeLayout main_layout;
-
-    TimeFragment timeFragment;
+    Bath arduino = new Bath();
+    TimeFragment timeFragment = new TimeFragment(arduino);
     TemperatureFragment tempFragment = new TemperatureFragment(this);
-
-    public Bath arduino = new Bath();
-
-    private static final int NOTIFY_ID = 1;
-    private static final String CHANNEL_ID = "Done";
-
-    SharedPreferences savePreference;
-    private final String KEYIP = "IP";
+    SharedPreferences savePreference = getSharedPreferences("MyPref", MODE_PRIVATE);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        arduino.createCoolerAndSet(0);
-        arduino.createCoolerAndSet(1);
-
-        timeFragment = new TimeFragment(arduino);
-
+        initUI();
+        initConnect();
+    }
+    public void initUI(){
         setFragment(timeFragment);
         setFragment(tempFragment);
         setFragment(timeFragment);
 
-
-        savePreference = getSharedPreferences("MyPref", MODE_PRIVATE);
-
         checkBox = findViewById(R.id.checkBox);
-
         editTextIP = findViewById(R.id.editIPid);
-        editTextIP.setText(savePreference.getString(KEYIP, ""));
-
-        
-
-        initConnect();
+        editTextIP.setText(savePreference.getString(KEY_IP, ""));
 
         Button saveBTN = findViewById(R.id.saveButtonID);
-        saveBTN.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                SharedPreferences.Editor ed = savePreference.edit();
-                ed.putString(KEYIP, editTextIP.getText().toString());
-                ed.apply();
+        saveBTN.setOnClickListener((view)->{
+            SharedPreferences.Editor ed = savePreference.edit();
+            ed.putString(KEY_IP, editTextIP.getText().toString());
+            ed.apply();
+            if(!arduino.getConnection())
                 initConnect();
-            }
         });
 
         buttonSend = findViewById(R.id.buttonSend);
-        buttonSend.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                sendTime();
+        buttonSend.setOnClickListener((view)->{
+            sendTime();
+            MainActivity.this.runOnUiThread(()->{
                 buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
-            }
+            });
         });
 
         buttonPlayOrPause = findViewById(R.id.buttonStart);
@@ -110,63 +90,48 @@ public class MainActivity extends AppCompatActivity {
             if(arduino.getState().equals(Bath.STATE_READY)){
                 sendTime();
                 arduino.start();
-                buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_pause_32);
+                MainActivity.this.runOnUiThread(()->{
+                    buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_pause_32);
+                });
             } else {
                 arduino.pause();
-                buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
+                MainActivity.this.runOnUiThread(()->{
+                    buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
+                });
             }
-
         });
-
         buttonStop = findViewById(R.id.buttonStop);
         buttonStop.setOnClickListener((View view)->{
             arduino.stop();
-            buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
+            MainActivity.this.runOnUiThread(()->{
+                buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
+            });
         });
-
-
-
-
-
-
-
-
-
-
-        GestureDetectorCompat lSwipeDetector = new GestureDetectorCompat(this, new MyGestureListener());
-        main_layout = findViewById(R.id.main_layout);
-
-        main_layout.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                return lSwipeDetector.onTouchEvent(event);
-            }
-        });
-
-
-
-    }
-    private class MyGestureListener extends GestureDetector.SimpleOnGestureListener{
-        boolean frag = false;
-        @Override
-        public boolean onDown(MotionEvent e) {
-            return true;
-        }
-        @Override
-        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY){
-            if (Math.abs(e1.getY() - e2.getY()) > 100)
-                return false;
-            if (Math.abs(e2.getX() - e1.getX()) > 50 && Math.abs(velocityX) > 0) {
-                if(frag) {
-                    setFragment(timeFragment);
-                } else {
-                    setFragment(tempFragment);
+        GestureDetectorCompat lSwipeDetector = new GestureDetectorCompat(this, new GestureDetector.SimpleOnGestureListener(){
+                boolean frag = false;
+                @Override
+                public boolean onDown(MotionEvent e) {
+                    return true;
                 }
-                frag = !frag;
-
-            }
-            return false;
-        }
+                @Override
+                public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY){
+                    if (Math.abs(e1.getY() - e2.getY()) > 100)
+                        return false;
+                    if (Math.abs(e2.getX() - e1.getX()) > 50 && Math.abs(velocityX) > 0) {
+                        if(frag){
+                            setFragment(timeFragment);
+                        }else{
+                            setFragment(tempFragment);
+                        }
+                        frag = !frag;
+                    }
+                    return false;
+                }
+            });
+        RelativeLayout main_layout = findViewById(R.id.main_layout);
+        main_layout.setOnTouchListener((View v, MotionEvent event)-> {
+            return lSwipeDetector.onTouchEvent(event);
+        });
     }
     public void setFragment(Fragment fragment){
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
@@ -182,15 +147,12 @@ public class MainActivity extends AppCompatActivity {
         public static final String STATE_TIME1 = "time1";
 
         private String state ="";
-        private Cooler cooler0;
-        private Cooler cooler1;
+        private Cooler cooler0 = new Cooler();
+        private Cooler cooler1 = new Cooler();
         private WebServer server;
 
-
         public void setState(String state){
-            if(this.state.equals(state)){
-
-            }else{
+            if(!this.state.equals(state)){
                 this.state = state;
                 switch (state){
                     case "stop":
@@ -207,11 +169,8 @@ public class MainActivity extends AppCompatActivity {
                     default:
                         break;
                 }
-
             }
-
         }
-
         public String getState(){
             return state;
         }
@@ -232,20 +191,13 @@ public class MainActivity extends AppCompatActivity {
         public boolean getConnection(){
             return server.connection;
         }
-        @Deprecated
-        public Cooler createCooler(int id){
-            return new Cooler(id);
-        }
-
         public void createCoolerAndSet(int id){
             setCooler(id, new Cooler());
         }
-
         public void clearTime(){
             cooler0.clearTime();
             cooler1.clearTime();
         }
-
         public Cooler getCooler(int id){
             if(id==0){
                 return cooler0;
@@ -253,7 +205,6 @@ public class MainActivity extends AppCompatActivity {
                 return cooler1;
             }
         }
-
         public void setCooler(int id, Cooler cooler){
             if(id==0){
                 cooler0 = cooler;
@@ -271,14 +222,11 @@ public class MainActivity extends AppCompatActivity {
                 default:
                     totalTime = textView;
                     setTotalTime();
-
             }
         }
-
         public WebServer getServer(){
             return  server;
         }
-
         public void setServer(WebServer server){
             this.server = server;
         }
@@ -301,7 +249,6 @@ public class MainActivity extends AppCompatActivity {
         }
         public class Cooler {
             Calendar workingTime = Calendar.getInstance();
-            int id;
             TextView textView;
             {
                 workingTime.set(Calendar.MINUTE, 0);
@@ -360,14 +307,12 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-    boolean last = true;
     public void initConnect() {
         String ipAddress = editTextIP.getText().toString();
         if(ipAddress.indexOf(":")<0)return;
         String portNumber = ipAddress.split(":")[1];
         ipAddress = ipAddress.split(":")[0];
         arduino.setServer(new WebServer(ipAddress, portNumber));
-        last = true;
         Timer myTimer = new Timer();
         myTimer.schedule(new TimerTask() {
             @Override
@@ -384,7 +329,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }catch(Exception ex) {
-
+                    Log.wtf("ERROR", ex);
                 }
                 arduino.setConnection(connection);
                 try{
@@ -419,6 +364,10 @@ public class MainActivity extends AppCompatActivity {
                     checkBox.setChecked(arduino.getConnection());
                     setTotalTime();
                 });
+                if(!arduino.getConnection()){
+                    myTimer.cancel();
+                    myTimer.purge();
+                }
             }
         }, 0, 1000);
     }
@@ -474,9 +423,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setTotalTime() {
-        if (timeFragment ==null) {
-            return;
-        }
         int hours = (arduino.cooler0.workingTime.get(Calendar.HOUR_OF_DAY) + arduino.cooler1.workingTime.get(Calendar.HOUR_OF_DAY));
         int minutes = (arduino.cooler0.workingTime.get(Calendar.MINUTE) + arduino.cooler1.workingTime.get(Calendar.MINUTE));
         int seconds = (arduino.cooler0.workingTime.get(Calendar.SECOND) + arduino.cooler1.workingTime.get(Calendar.SECOND));
@@ -488,7 +434,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void sendNotification(String title, String text){
-        NotificationManager notificationManager = getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationManager notificationManager = (NotificationManager)getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
         Intent intent = new Intent(getApplicationContext(), MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -512,12 +458,10 @@ public class MainActivity extends AppCompatActivity {
     private class HttpRequestAsyncTask extends AsyncTask<Void, Void, Void>{
         WebServer server;
         String requests;
-
         public HttpRequestAsyncTask(WebServer server, String command){
             this.server = server;
             this.requests = command;
         }
-
         @Override
         protected Void doInBackground(Void... voids) {
             String str = server.sendRequest(requests);
