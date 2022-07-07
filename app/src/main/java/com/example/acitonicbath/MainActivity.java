@@ -2,13 +2,11 @@ package com.example.acitonicbath;
 
 import static androidx.core.app.NotificationCompat.PRIORITY_HIGH;
 import static androidx.core.app.NotificationCompat.DEFAULT_ALL;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.view.GestureDetectorCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
-
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -30,7 +28,6 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.app.TimePickerDialog;
 import android.widget.TimePicker;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -56,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
 
     public Bath arduino = new Bath();
 
-    private NotificationManager notificationManager;
     private static final int NOTIFY_ID = 1;
     private static final String CHANNEL_ID = "Done";
 
@@ -82,12 +78,10 @@ public class MainActivity extends AppCompatActivity {
 
         checkBox = findViewById(R.id.checkBox);
 
-
-
         editTextIP = findViewById(R.id.editIPid);
         editTextIP.setText(savePreference.getString(KEYIP, ""));
 
-        notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        
 
         initConnect();
 
@@ -288,41 +282,33 @@ public class MainActivity extends AppCompatActivity {
         public void setServer(WebServer server){
             this.server = server;
         }
-
         public void start(){
             String requests = "start,0";
             new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
         }
-
         public void pause(){
             String requests = "stop,0";
             new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
         }
-
         public void stop(){
             String requests = "stop,0";
             new HttpRequestAsyncTask(arduino.getServer(), requests).execute();
             arduino.clearTime();
-            buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
+            MainActivity.this.runOnUiThread(()->{
+                buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32);
+            });
             sendNotification("Готово", "Твоё время пришло...");
         }
-
         public class Cooler {
             Calendar workingTime = Calendar.getInstance();
             int id;
             TextView textView;
-
             {
                 workingTime.set(Calendar.MINUTE, 0);
                 workingTime.set(Calendar.HOUR_OF_DAY, 0);
                 workingTime.set(Calendar.SECOND, 0);
             }
-            public Cooler(){}
-            @Deprecated
-            public Cooler(int id){
-                this.textView = findViewById(id);
-                this.textView.setOnClickListener(new listener());
-            }
+
             public void setView(TextView textView){
                 this.textView = textView;
                 this.textView.setOnClickListener(new listener());
@@ -349,7 +335,6 @@ public class MainActivity extends AppCompatActivity {
                     textView.setText(String.format("%02d:%02d", workingTime.get(Calendar.HOUR_OF_DAY), workingTime.get(Calendar.MINUTE)));
                 }
             }
-
             @Override
             public String toString() {
                 int second = ((workingTime.get(Calendar.HOUR_OF_DAY)*60+workingTime.get(Calendar.MINUTE))*60)+workingTime.get(Calendar.SECOND);
@@ -374,9 +359,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
     }
-
     boolean last = true;
     public void initConnect() {
         String ipAddress = editTextIP.getText().toString();
@@ -443,12 +426,10 @@ public class MainActivity extends AppCompatActivity {
     class WebServer{
         boolean connection;
         String ipAddress, portNumber;
-
         public WebServer(String ipAddress, String portNumber){
             this.ipAddress = ipAddress;
             this.portNumber = portNumber;
         }
-
         /**
          * Description: Послать HTTP Get запрос на указанные ip адрес и порт.
          * Также послать параметр "parameterName" со значением "parameterValue".
@@ -458,12 +439,9 @@ public class MainActivity extends AppCompatActivity {
             String serverResponse = "";
             try {
                 URL website = new URL("http://"+ipAddress+":"+portNumber+"/send?command="+command);
-                Log.i("WebSite", "" + website);
                 HttpURLConnection httpURLConnection = (HttpURLConnection)website.openConnection();
                 httpURLConnection.setRequestMethod("GET");
-
                 BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
-
                 String inputLine;
                 StringBuffer response = new StringBuffer();
                 serverResponse = response.toString();
@@ -477,13 +455,9 @@ public class MainActivity extends AppCompatActivity {
                 Log.i("sendRequest", "" + ex);
                 return null;
             }
-            // вернуть текст отклика сервера
-            Log.wtf("Ответ", serverResponse);
-            //Log.i("Ответ", serverResponse);
             return serverResponse;
         }
     }
-
     public void sendTime() {
         try{
             String requests = "";
@@ -508,13 +482,13 @@ public class MainActivity extends AppCompatActivity {
         int seconds = (arduino.cooler0.workingTime.get(Calendar.SECOND) + arduino.cooler1.workingTime.get(Calendar.SECOND));
         hours += minutes/60;
         minutes = minutes%60;
-
         arduino.cooler1.update();
         arduino.cooler0.update();
         totalTime.setText(String.format("%02d:%02d:%02d",hours, minutes, seconds));
     }
 
     public void sendNotification(String title, String text){
+        NotificationManager notificationManager = getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
         Intent intent = new Intent(getApplicationContext(), MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
