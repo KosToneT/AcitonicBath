@@ -1,5 +1,6 @@
 package com.example.acitonicbath;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -25,17 +26,14 @@ public class TemperatureFragment extends Fragment {
     public TextView temp;
     private int temperature;
     private LinkedList<Integer> tempList = new LinkedList<>();
-
-    CurveGraphView curveGraphView;
-
+    private CurveGraphView curveGraphView;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
     }
-    View rootView;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        rootView = inflater.inflate(R.layout.fragment_temperature, container, false);
+        View rootView = inflater.inflate(R.layout.fragment_temperature, container, false);
         temp = rootView.findViewById(R.id.temp);
         curveGraphView = rootView.findViewById(R.id.cgv);
         curveGraphView.configure(
@@ -82,8 +80,6 @@ public class TemperatureFragment extends Fragment {
                 max = value;
             }
         }
-
-
         GraphData gd2 = GraphData.builder(this.getContext())
                 .setPointMap(pointMap)
                 .setGraphStroke(Color.GRAY)
@@ -94,13 +90,9 @@ public class TemperatureFragment extends Fragment {
             curveGraphView.setData(tempList.size(), finalMax, gd2);
             this.temp.setText(String.format("%d°С", temperature));
         });
-
     }
 
-    MainActivity mainActivity;
-    public TemperatureFragment(MainActivity mainActivity) {
-        this.mainActivity = mainActivity;
-    }
+
     public void setTemperature(int temp){
         temperature = temp;
         if(tempList.size()>25){
@@ -109,8 +101,6 @@ public class TemperatureFragment extends Fragment {
         tempList.add(temp);
         DrawGraphic();
     }
-
-
     public int getTemperature(){
         return  temperature;
     }
