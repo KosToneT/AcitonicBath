@@ -30,7 +30,6 @@
             android:id="@+id/time3"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
             android:layout_marginBottom="8dp"
             android:minHeight="48dp"
             android:text="00:00"
@@ -42,13 +41,70 @@
             android:id="@+id/time4"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
             android:layout_marginBottom="8dp"
             android:minHeight="48dp"
             android:text="00:00"
             android:textSize="34sp"
             app:layout_constraintBottom_toTopOf="@+id/totalTime2"
             app:layout_constraintEnd_toEndOf="@+id/totalTime2" />
+
+        <TextView
+            android:id="@+id/txtTemp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/_0_c"
+            android:textSize="60sp"
+            app:layout_constraintEnd_toEndOf="@+id/totalTime2"
+            app:layout_constraintStart_toStartOf="@+id/totalTime2"
+            app:layout_constraintTop_toBottomOf="@+id/totalTime2" />
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="-16dp"
+            android:text="Общее время"
+            app:layout_constraintBottom_toTopOf="@+id/totalTime2"
+            app:layout_constraintStart_toStartOf="@+id/totalTime2" />
+
+        <TextView
+            android:id="@+id/textView3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="-10dp"
+            android:text="Работа"
+            app:layout_constraintBottom_toTopOf="@+id/time3"
+            app:layout_constraintStart_toStartOf="@+id/time3" />
+
+        <TextView
+            android:id="@+id/textView4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="-10dp"
+            android:text="Обдув"
+            app:layout_constraintBottom_toTopOf="@+id/time4"
+            app:layout_constraintEnd_toEndOf="@+id/time4" />
+
+        <TextView
+            android:id="@+id/textView5"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="-10dp"
+            android:text="Температура"
+            app:layout_constraintBottom_toTopOf="@+id/txtTemp"
+            app:layout_constraintEnd_toEndOf="@+id/txtTemp"
+            app:layout_constraintStart_toStartOf="@+id/txtTemp" />
+
+        <TextView
+            android:id="@+id/txtStateViewTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-14dp"
+            android:text="СОСТОЯНИЕ"
+            app:layout_constraintEnd_toEndOf="@+id/txtTemp"
+            app:layout_constraintStart_toStartOf="@+id/txtTemp"
+            app:layout_constraintTop_toBottomOf="@+id/txtTemp" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </FrameLayout>

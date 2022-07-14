@@ -1,14 +1,32 @@
 package com.example.acitonicbath;
 
+/**
+ *  ██████╗░███████╗██╗░░░██╗███████╗██╗░░░░░░█████╗░██████╗░███╗░░░███╗███████╗███╗░░██╗████████╗░░░██████╗░██╗░░░██╗
+ *  ██╔══██╗██╔════╝██║░░░██║██╔════╝██║░░░░░██╔══██╗██╔══██╗████╗░████║██╔════╝████╗░██║╚══██╔══╝░░░██╔══██╗╚██╗░██╔╝
+ *  ██║░░██║█████╗░░╚██╗░██╔╝█████╗░░██║░░░░░██║░░██║██████╔╝██╔████╔██║█████╗░░██╔██╗██║░░░██║░░░░░░██████╦╝░╚████╔╝░
+ *  ██║░░██║██╔══╝░░░╚████╔╝░██╔══╝░░██║░░░░░██║░░██║██╔═══╝░██║╚██╔╝██║██╔══╝░░██║╚████║░░░██║░░░░░░██╔══██╗░░╚██╔╝░░
+ *  ██████╔╝███████╗░░╚██╔╝░░███████╗███████╗╚█████╔╝██║░░░░░██║░╚═╝░██║███████╗██║░╚███║░░░██║░░░██╗██████╦╝░░░██║░░░
+ *  ╚═════╝░╚══════╝░░░╚═╝░░░╚══════╝╚══════╝░╚════╝░╚═╝░░░░░╚═╝░░░░░╚═╝╚══════╝╚═╝░░╚══╝░░░╚═╝░░░╚═╝╚═════╝░░░░╚═╝░░░
+ *
+ *  ██╗░░██╗░█████╗░░██████╗████████╗░█████╗░███╗░░██╗███████╗████████╗
+ *  ██║░██╔╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗████╗░██║██╔════╝╚══██╔══╝
+ *  █████═╝░██║░░██║╚█████╗░░░░██║░░░██║░░██║██╔██╗██║█████╗░░░░░██║░░░
+ *  ██╔═██╗░██║░░██║░╚═══██╗░░░██║░░░██║░░██║██║╚████║██╔══╝░░░░░██║░░░
+ *  ██║░╚██╗╚█████╔╝██████╔╝░░░██║░░░╚█████╔╝██║░╚███║███████╗░░░██║░░░
+ *  ╚═╝░░╚═╝░╚════╝░╚═════╝░░░░╚═╝░░░░╚════╝░╚═╝░░╚══╝╚══════╝░░░╚═╝░░░
+ *
+ *  ░██████╗██╗░░██╗██╗██████╗░██████╗░░█████╗░░██████╗░██╗░░░██╗░░░░░░░░█████╗░░█████╗░░█████╗░░░██╗██╗██████╗░
+ *  ██╔════╝██║░██╔╝██║██╔══██╗██╔══██╗██╔══██╗██╔════╝░██║░░░██║░░██╗░░██╔══██╗██╔══██╗██╔══██╗░██╔╝██║██╔══██╗
+ *  ╚█████╗░█████═╝░██║██████╔╝██║░░██║███████║██║░░██╗░██║░░░██║██████╗██║░░██║██║░░██║██║░░╚═╝██╔╝░██║██║░░██║
+ *  ░╚═══██╗██╔═██╗░██║██╔═══╝░██║░░██║██╔══██║██║░░╚██╗██║░░░██║╚═██╔═╝██║░░██║██║░░██║██║░░██╗███████║██║░░██║
+ *  ██████╔╝██║░╚██╗██║██║░░░░░██████╔╝██║░░██║╚██████╔╝╚██████╔╝░░╚═╝░░╚█████╔╝╚█████╔╝╚█████╔╝╚════██║██████╔╝
+ *  ╚═════╝░╚═╝░░╚═╝╚═╝╚═╝░░░░░╚═════╝░╚═╝░░╚═╝░╚═════╝░░╚═════╝░░░░░░░░░╚════╝░░╚════╝░░╚════╝░░░░░░╚═╝╚═════╝░
+ */
+
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
 import androidx.core.view.GestureDetectorCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
@@ -25,6 +43,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.app.TimePickerDialog;
 import android.widget.TimePicker;
+import android.widget.Toast;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -38,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private Button buttonPlayOrPause;
     private Bath arduino = new Bath();
     private TimeFragment timeFragment = new TimeFragment(arduino);
-    private TemperatureFragment tempFragment = new TemperatureFragment();
+    private TemperatureFragment tempFragment = new TemperatureFragment(arduino);
     private SharedPreferences savePreference;
     /**
      * Point's enter in app
@@ -50,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         savePreference = getSharedPreferences("MyPref", MODE_PRIVATE);
         initUI();
-        initConnect();
+        new ConnectionService(arduino);
     }
     /**
      * Init UI for app
@@ -62,36 +81,35 @@ public class MainActivity extends AppCompatActivity {
 
         final String KEY_IP = "IP";
         EditText editTextIP = findViewById(R.id.editIPid);
-        editTextIP.setText(savePreference.getString(KEY_IP, ""));
+        editTextIP.setText(savePreference.getString(KEY_IP, "192.168.4.1:80"));
         Button saveBTN = findViewById(R.id.saveButtonID);
         saveBTN.setOnClickListener((view)->{
             SharedPreferences.Editor ed = savePreference.edit();
             ed.putString(KEY_IP, editTextIP.getText().toString());
             ed.apply();
-            if(!arduino.getConnection())
+            if(!arduino.getConnection()){
                 initConnect();
-        });
-
-        Button buttonSend = findViewById(R.id.buttonSend);
-        buttonSend.setOnClickListener((view)->{
-            arduino.sendTime();
-            MainActivity.this.runOnUiThread(()-> buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32));
+            }
         });
 
         buttonPlayOrPause = findViewById(R.id.buttonStart);
         buttonPlayOrPause.setOnClickListener((View view)->{
             if(arduino.getState().equals(Bath.STATE_READY)){
-                arduino.sendTime();
                 arduino.start();
                 MainActivity.this.runOnUiThread(()->buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_pause_32));
+                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+                    startForegroundService(new Intent(this, ConnectionService.class));
+                }
             } else {
                 arduino.pause();
                 MainActivity.this.runOnUiThread(()->buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32));
             }
         });
+
         Button buttonStop = findViewById(R.id.buttonStop);
         buttonStop.setOnClickListener((View view)->{
             arduino.stop();
+            Toast.makeText(this, "Остановленно", Toast.LENGTH_LONG).show();
             MainActivity.this.runOnUiThread(()->buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32));
         });
 
@@ -198,37 +216,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }, 0, 1000);
     }
-
-    /**
-     * send notification on phone
-     * @param title title which show
-     * @param text text which show
-     */
-    public void sendNotification(String title, String text){
-        final int NOTIFY_ID = 1;
-        final String CHANNEL_ID = "Done";
-        final int PRIORITY_HIGH = 1;
-        final int DEFAULT_ALL = ~0;
-        NotificationManager notificationManager = (NotificationManager)getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
-        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        NotificationCompat.Builder notificationBuilder =
-                new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
-                        .setAutoCancel(false)
-                        .setSmallIcon(R.drawable.ic_launcher_foreground)
-                        .setWhen(System.currentTimeMillis())
-                        .setContentIntent(pendingIntent)
-                        .setContentTitle(title)
-                        .setContentText(text)
-                        .setPriority(PRIORITY_HIGH)
-                        .setDefaults(DEFAULT_ALL);
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT);
-            notificationManager.createNotificationChannel(notificationChannel);
-        }
-        notificationManager.notify(NOTIFY_ID, notificationBuilder.build());
-    }
     /**
      * class Bath is real Model Bath
      * can start, stop, pause, real Bath
@@ -241,24 +228,16 @@ public class MainActivity extends AppCompatActivity {
          */
         public static final String STATE_READY = "ready";
         public static final String STATE_STOP = "stop";
+        public static final String STATE_TEMP = "temp";
         public static final String STATE_TIME0 = "time0";
         public static final String STATE_TIME1 = "time1";
-//        enum STATE{
-//            READY("ready"),
-//            STOP("stop"),
-//            TIME0("time0"),
-//            TIME1("time1");
-//
-//            private String title;
-//            STATE(String title){
-//                this.title = title;
-//            }
-//        }
 
         private String state ="";
+        private int temp = 50;
         private Cooler cooler0 = new Cooler();
         private Cooler cooler1 = new Cooler();
         private TextView totalTime;
+        private TextView stateView;
         private WebServer server = new WebServer();
         /**
          * Setting state of bath
@@ -268,10 +247,14 @@ public class MainActivity extends AppCompatActivity {
             if(!this.state.equals(state)){
                 this.state = state;
                 switch (state){
-                    case STATE_STOP://Никогда не вызывается
+                    case STATE_STOP:
                         stop();
                         break;
+                    case STATE_TEMP:
+                        setTemp();
+                        break;
                     case STATE_READY:
+                        setReady();
                         break;
                     case STATE_TIME0:
                     case STATE_TIME1:
@@ -282,8 +265,38 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+
+        /**
+         * transition to temp state
+         */
+        public void setTemp(){
+
+        }
+        /**
+         * transition to ready state
+         */
+        public void setReady(){
+            server.sendAsyncRequest("setReady,0");
+            MainActivity.this.runOnUiThread(()->buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32));
+        }
         public String getState(){
             return state;
+        }
+        public String getStateRUS(){
+            String str = "Состояние: ";
+            switch (getState()){
+                case STATE_READY:
+                    return str +"охотно сделаю";
+                case STATE_STOP:
+                    return str + "остановленно";
+                case STATE_TIME0:
+                    return str + "обработка";
+                case STATE_TIME1:
+                    return str + "обдув";
+                case STATE_TEMP:
+                    return str + "разогрев";
+            }
+            return null;
         }
         /**
          * set IndicatorConnection to server
@@ -302,12 +315,6 @@ public class MainActivity extends AppCompatActivity {
         public Cooler getCooler(int id){
             return id==0?cooler0:cooler1;
         }
-        public void setCooler(int id, Cooler cooler){
-            if(id==0)
-                cooler0 = cooler;
-            else
-                cooler1 = cooler;
-        }
         /**
          * set View at app
          * need for update time, and set it clickable
@@ -321,6 +328,10 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case 1:
                     cooler1.setView(textView);
+                    break;
+                case 2:
+                    stateView = textView;
+                    break;
                 default:
                     totalTime = textView;
                     setTotalTime();
@@ -340,25 +351,28 @@ public class MainActivity extends AppCompatActivity {
          * starting bath by wifi
          */
         public void start(){
+            sendTime();
+            sendTemp();
             String requests = "start,0";
-            arduino.getServer().sendAsyncRequest(requests);
+            getServer().sendAsyncRequest(requests);
         }
         /**
          * pause bath by wifi
          */
         public void pause(){
             String requests = "stop,0";
-            arduino.getServer().sendAsyncRequest(requests);
+            getServer().sendAsyncRequest(requests);
         }
         /**
          * stop bath by wifi
          */
         public void stop(){
             String requests = "stop,0";
-            arduino.getServer().sendAsyncRequest(requests);
-            arduino.clearTime();
+            getServer().sendAsyncRequest(requests);
+            clearTime();
             MainActivity.this.runOnUiThread(()->buttonPlayOrPause.setBackgroundResource(R.drawable.icons8_play_32));
-            sendNotification("Готово", "Твоё время пришло...");
+            MainActivity.this.stopService(new Intent(MainActivity.this, ConnectionService.class));
+            setReady();
         }
         /**
          * update text all time
@@ -371,25 +385,48 @@ public class MainActivity extends AppCompatActivity {
             minutes = minutes%60;
             cooler1.update();
             cooler0.update();
+            stateView.setText(getStateRUS());
             totalTime.setText(String.format("%02d:%02d:%02d",hours, minutes, seconds));
         }
-
         /**
          * send time to bath by wifi
          */
         public void sendTime() {
+            if(!(cooler0.toSecond()+ cooler1.toSecond()>0)){
+                return;
+            }
+
             try{
                 //OpenConnectionSendRequests
                 if(getState().equals(Bath.STATE_READY)){
-                    String requests = "setTime0," + arduino.cooler0.toString();
-                    arduino.getServer().sendAsyncRequest(requests);
-                    requests = "setTime1," + arduino.cooler1.toString();
-                    arduino.getServer().sendAsyncRequest(requests);
+                    String requests = "setTime0," + cooler0.toSecond();
+                    this.server.sendAsyncRequest(requests);
+                    requests = "setTime1," + cooler1.toSecond();
+                    this.server.sendAsyncRequest(requests);
                 }
             }catch(Exception ex){
                 Log.i("sendTime", "" + ex);
             }
         }
+        /**
+         * send temp to bath by wifi
+         */
+        public void sendTemp() {
+            try{
+                //OpenConnectionSendRequests
+                String requests = "setTemp,"+ temp;
+                this.server.sendAsyncRequest(requests);
+            }catch(Exception ex){
+                Log.i("sendTemp", "" + ex);
+            }
+        }
+        public void setTemp(int temp){
+            this.temp = temp;
+        }
+        public int getTemp(){
+            return temp;
+        }
+
 
         /**
          * reset cooler timer
@@ -398,6 +435,7 @@ public class MainActivity extends AppCompatActivity {
             cooler0.clearTime();
             cooler1.clearTime();
         }
+
 
         /**
          * class for information user about time
@@ -463,18 +501,23 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             /**
+             * get working second
+             * @return seconds
+             */
+            public int toSecond(){
+                return ((workingTime.get(Calendar.HOUR_OF_DAY)*60+workingTime.get(Calendar.MINUTE))*60)+workingTime.get(Calendar.SECOND);
+            }
+            /**
              * need if need string working seconds
              * @return second working time
              */
             @Override
             public String toString() {
-                int second = ((workingTime.get(Calendar.HOUR_OF_DAY)*60+workingTime.get(Calendar.MINUTE))*60)+workingTime.get(Calendar.SECOND);
-                return String.format("%d", second);
+                return  "Cooler: "+textView.getText();
             }
 
         }
     }
-
     /**
      * class WebServer with possibly send requests on ipAddres:Port
      *

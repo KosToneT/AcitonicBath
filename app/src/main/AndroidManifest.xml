@@ -2,7 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.acitonicbath">
-
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
@@ -17,6 +19,12 @@
         android:theme="@style/Theme.AcitonicBath"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
+        <service
+            android:name=".ConnectionService"
+            android:enabled="true"
+            android:stopWithTask="false"
+            android:exported="true">
+        </service>
 
         <activity
             android:name=".MainActivity"
